@@ -56,16 +56,30 @@ def generate_aes_key(key_size=16):
     return random.getrandbits(key_size * 8).to_bytes(key_size, byteorder='big')
 
 def aes_encrypt(plaintext, key):
-    cipher = AES.new(key, AES.MODE_CBC)
-    ct_bytes = cipher.encrypt(pad(plaintext.encode(), AES.block_size))
-    return cipher.iv + ct_bytes
+    if not isinstance(key, bytes) or len(key) != 16:
+        raise ValueError(f"Invalid key format or length. Expected 16 bytes, got {len(key)} bytes")
+    try:
+        cipher = AES.new(key, AES.MODE_CBC)
+        padded_data = pad(plaintext.encode('utf-8'), AES.block_size)
+        ct_bytes = cipher.encrypt(padded_data)
+        return cipher.iv + ct_bytes
+    except Exception as e:
+        raise ValueError(f"Encryption failed: {str(e)}")
 
 def aes_decrypt(ciphertext, key):
-    iv = ciphertext[:AES.block_size]
-    ct = ciphertext[AES.block_size:]
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    pt = unpad(cipher.decrypt(ct), AES.block_size)
-    return pt.decode()
+    if not isinstance(key, bytes) or len(key) != 16:
+        raise ValueError(f"Invalid key format or length. Expected 16 bytes, got {len(key)} bytes")
+    if len(ciphertext) < AES.block_size:
+        raise ValueError("Invalid ciphertext length")
+    try:
+        iv = ciphertext[:AES.block_size]
+        ct = ciphertext[AES.block_size:]
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        decrypted_data = cipher.decrypt(ct)
+        unpadded_data = unpad(decrypted_data, AES.block_size)
+        return unpadded_data.decode('utf-8')
+    except Exception as e:
+        raise ValueError(f"Decryption failed: {str(e)}")
 
 # # Example usage:
 # if __name__ == "__main__":
